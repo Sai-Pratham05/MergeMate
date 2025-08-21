@@ -4,7 +4,7 @@
   "description": "Tinder for devs",
   "main": "index.js",
   "scripts": {
-    "start":"node src/app.js",
+    "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
   "keywords": [
@@ -16,6 +16,7 @@
   "author": "SAI PRATHAM KH",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^4.21.2",
+    "mongoose": "^8.17.2"
   }
 }
