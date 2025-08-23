@@ -60,12 +60,21 @@ app.delete("/user", async (req, res) => {
 });
 //update the data of the user
 
-app.patch("/user", async (req, res) => {
-  const UserId = req.body.UserId;
-  const updates = req.body.updates;
-  const user = await User.findByIdAndUpdate(UserId, updates, { new: true });
-  console.log(user);
+app.patch("/user1/:UserId", async (req, res) => {
+  const UserId = req.params.UserId;
+  const body = req.body;
   try {
+    const UPDATION_ALLOWED = ["age", "gender", "photoURL", "skills"];
+    const isValidUpdate = Object.keys(body).every((update) =>
+      UPDATION_ALLOWED.includes(update)
+    );
+    if (!isValidUpdate) {
+      return res.status(400).send("Invalid update fields");
+    }
+    const user = await User.findByIdAndUpdate(UserId, body, {
+      new: true,
+      runValidators: true,
+    });
     res.send(user);
   } catch (e) {
     res.status(500).send("Failed to update user");
@@ -73,7 +82,6 @@ app.patch("/user", async (req, res) => {
 });
 
 //update using email
-
 app.patch("/user1", async (req, res) => {
   try {
     const { email, updates } = req.body;
@@ -86,7 +94,9 @@ app.patch("/user1", async (req, res) => {
     }
     const updatedUser = await User.findByIdAndUpdate(userDoc._id, updates, {
       new: true,
-    },{runValidators: true},{ReturnDocument: "after"});
+      runValidators: true,
+      returnDocument: "after",
+    });
     if (!updatedUser) {
       return res.status(500).send("Failed to update user");
     }
