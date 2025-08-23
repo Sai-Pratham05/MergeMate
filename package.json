@@ -16,6 +16,7 @@
   "author": "SAI PRATHAM KH",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "^4.21.2",
     "mongoose": "^8.17.2",
     "validator": "^13.15.15"

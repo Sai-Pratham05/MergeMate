@@ -1,76 +1,64 @@
 const mongoose = require("mongoose");
-const validator = require("validator"); //this is used to throw the validation check installed from npm
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
   {
     firstName: {
       type: String,
-      required: true,
-      minlength: 2,
-      maxlength: 30,
+      trim: true,
+      minlength: [2, "First name must be at least 2 characters"],
+      maxlength: [30, "First name cannot exceed 30 characters"],
     },
     lastName: {
       type: String,
-      required: true,
+      trim: true,
     },
     email: {
       type: String,
-      required: true,
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
-      validate(value) {
-        if (!validator.isEmail(value)) {
-          throw new Error("Invalid email format");
-        }
+      validate: {
+        validator: (value) => validator.isEmail(value),
+        message: "Invalid email format",
       },
     },
     password: {
       type: String,
-      required: true,
-      validate(value) {
-        if (!validator.isStrongPassword(value)) {
-          throw new Error("weak password");
-        }
+      required: [true, "Password is required"],
+      validate: {
+        validator: (value) => validator.isStrongPassword(value),
+        message:
+          "Password must contain uppercase, lowercase, number, and special character",
       },
     },
     age: {
       type: Number,
+      min: [13, "User must be at least 13 years old"],
+      max: [120, "Invalid age"],
     },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
-      required: true,
-      validate(value) {
-        if (value !== "male" && value !== "female" && value !== "other") {
-          throw new Error("Invalid gender");
-        }
+      enum: {
+        values: ["male", "female", "other"],
+        message: "Gender must be male, female, or other",
       },
     },
     photoURL: {
       type: String,
-      required: true,
       default:
         "https://www.pikpng.com/pngl/b/417-4172348_testimonial-user-icon-color-clipart.png",
-      validate(value) {
-        if (!validator.isURL(value)) {
-          throw new Error("Invalid URL format");
-        }
+      validate: {
+        validator: (value) => validator.isURL(value),
+        message: "Invalid URL format",
       },
-    },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
     },
     skills: {
       type: [String],
-      required: [true, "Skills are required"],
       validate: {
         validator: function (arr) {
+          if (!arr) return true; // Skip validation if not provided
           return (
             Array.isArray(arr) &&
             arr.length >= 1 &&
@@ -84,12 +72,45 @@ const userSchema = new mongoose.Schema(
           "User must have at least 1 non-empty skill and less than 5 skills.",
       },
     },
+    bio: {
+      type: String,
+      maxlength: [500, "Bio cannot exceed 500 characters"],
+    },
+    active: {
+      type: Boolean,
+      default: true,
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
   },
   {
-    timestamps: true,
+    timestamps: true, // This replaces the manual createdAt and updatedAt fields
   }
 );
 
-const User = mongoose.model("User", userSchema); //model accepts a name and schema and here User is the name of the model and it can be used to create and manage user documents in the database
+// Create a compound index for improved query performance
+userSchema.index({ email: 1 });
+
+// Instance method to hide sensitive information when sending user data
+userSchema.methods.toJSON = function () {
+  const user = this.toObject();
+  delete user.password; // Don't send password
+  return user;
+};
+
+// Static method to find user by credentials
+userSchema.statics.findByCredentials = async function (email, password) {
+  const user = await this.findOne({ email });
+  if (!user) {
+    throw new Error("Unable to login");
+  }
+  // Note: You'll need to use bcrypt.compare in your route handler
+  return user;
+};
+
+const User = mongoose.model("User", userSchema);
 
 module.exports = User;

@@ -1,29 +1,123 @@
 const express = require("express");
 const app = express();
-const port = 3000;
+const port = 4000;
 const User = require("./models/user");
+const { ValidationSignUp } = require("./utils/validation.js");
+const bcrypt = require("bcrypt");
 
 app.use(express.json()); //this is express middleware which parses incoming JSON requests and data is stored inside req.body
 
 app.post("/signup", async (req, res) => {
-  //creating an User's Instance
-  const user = new User(req.body);
-  user
-    .save()
-    .then(() => {
-      res.status(201).json({ message: "User created successfully" });
-    })
-    .catch((error) => {
-      res.status(500).json({ error: "Failed to create user" });
+  //validation of the data
+  try {
+    ValidationSignUp(req);
+
+    const { firstName, lastName, email, password, gender, skills } = req.body;
+
+    console.log("Processing new user registration");
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      console.log("Registration failed - email already exists");
+      return res
+        .status(400)
+        .json({ error: "User already exists with this email" });
+    }
+
+    //encrypting the password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    //creating an User's Instance
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      password: passwordHash,
+      gender: gender || "other", // Default gender if not provided
+      skills: skills || ["Not specified"], // Default skill if not provided
     });
+
+    await user.save();
+    console.log("User registration successful");
+    res.status(201).json({ message: "User created successfully" });
+  } catch (error) {
+    console.error("Signup error:", error.message);
+    res.status(400).send("ERROR: " + error.message);
+  }
+});
+
+//login
+app.post("/login", async (req, res) => {
+  try {
+    const { password, email } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    console.log("Login attempt received");
+
+    // Using case-insensitive search for email
+    const user = await User.findOne({
+      email: { $regex: new RegExp("^" + email + "$", "i") },
+    });
+
+    if (!user) {
+      console.log("Authentication failed - user not found");
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // First try direct comparison (for non-hashed passwords in db)
+    if (user.password === password) {
+      console.log("Authentication successful - direct comparison");
+
+      // Optionally hash the password for future logins
+      // user.password = await bcrypt.hash(password, 10);
+      // await user.save();
+
+      return res.json({
+        message: "Login successful",
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        },
+      });
+    }
+
+    // Then try bcrypt comparison (for hashed passwords)
+    try {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (isMatch) {
+        console.log("Authentication successful - bcrypt comparison");
+        return res.json({
+          message: "Login successful",
+          user: {
+            id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+          },
+        });
+      }
+    } catch (err) {
+      console.log("Authentication error");
+    }
+
+    // If we get here, both methods failed
+    return res.status(401).json({ error: "Invalid credentials" });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Failed to login: " + error.message });
+  }
 });
 
 //get user by email
-
 app.get("/user", async (req, res) => {
-  // console.log(req.body);
   const Useremail = req.body.email;
-  console.log(Useremail);
+  console.log("User lookup requested");
   try {
     const user = await User.findOne({ email: Useremail });
     if (!user) {
@@ -36,7 +130,6 @@ app.get("/user", async (req, res) => {
 });
 
 //get all the data from the database
-
 app.get("/feeds", async (req, res) => {
   try {
     const feeds = await User.find({});
@@ -46,20 +139,51 @@ app.get("/feeds", async (req, res) => {
   }
 });
 
-//delete the data from id
+// Debug route to find a specific user
+app.get("/debug/finduser", async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).send("Email parameter is required");
+    }
 
+    console.log("Debug user search initiated");
+
+    // Find all users with emails containing the given string (case insensitive)
+    const users = await User.find({
+      email: { $regex: email, $options: "i" },
+    });
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        message: "No matching users found",
+        allUsers: await User.find({}, "email"), // Return just emails of all users
+      });
+    }
+
+    res.json({
+      message: "Users found",
+      count: users.length,
+      users: users.map((u) => ({ id: u._id, email: u.email })),
+    });
+  } catch (e) {
+    res.status(500).send("Error: " + e.message);
+  }
+});
+
+//delete the data from id
 app.delete("/user", async (req, res) => {
   const UserId = req.body.UserId;
   const user = await User.findByIdAndDelete(UserId);
-  console.log(user);
+  console.log("User deletion processed");
   try {
-    res.send("deleted succesfully");
+    res.send("deleted successfully");
   } catch (e) {
     res.status(500).send("Failed to delete user");
   }
 });
-//update the data of the user
 
+//update the data of the user
 app.patch("/user1/:UserId", async (req, res) => {
   const UserId = req.params.UserId;
   const body = req.body;
@@ -107,7 +231,6 @@ app.patch("/user1", async (req, res) => {
 });
 
 const connectDatabase = require("./config/database");
-const { ReturnDocument } = require("mongodb");
 
 connectDatabase()
   .then(() => {
