@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
 
 const connectDatabase = async () => {
-  await mongoose.connect(
-    "mongodb+srv://saipratham007:AJH8ncfNyPt4Veyc@mergemate.g7vk2b0.mongodb.net/MergeMate"
-  );
-}; //this returns a promise
+  try {
+    await mongoose.connect(
+      "mongodb+srv://saiprathamwork:v7uYxjul2ETi1cUC@mergemate.ykuhsid.mongodb.net/MergeMate"
+    );
+    console.log("MongoDB connected successfully!");
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+  }
+};
 
 module.exports = connectDatabase;
-
