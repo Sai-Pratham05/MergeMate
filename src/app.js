@@ -18,7 +18,87 @@ app.post("/signup", async (req, res) => {
     });
 });
 
+//get user by email
+
+app.get("/user", async (req, res) => {
+  // console.log(req.body);
+  const Useremail = req.body.email;
+  console.log(Useremail);
+  try {
+    const user = await User.findOne({ email: Useremail });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.send(user);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to retrieve user" });
+  }
+});
+
+//get all the data from the database
+
+app.get("/feeds", async (req, res) => {
+  try {
+    const feeds = await User.find({});
+    res.send(feeds);
+  } catch (e) {
+    res.status(500).send("Failed to retrieve feeds");
+  }
+});
+
+//delete the data from id
+
+app.delete("/user", async (req, res) => {
+  const UserId = req.body.UserId;
+  const user = await User.findByIdAndDelete(UserId);
+  console.log(user);
+  try {
+    res.send("deleted succesfully");
+  } catch (e) {
+    res.status(500).send("Failed to delete user");
+  }
+});
+//update the data of the user
+
+app.patch("/user", async (req, res) => {
+  const UserId = req.body.UserId;
+  const updates = req.body.updates;
+  const user = await User.findByIdAndUpdate(UserId, updates, { new: true });
+  console.log(user);
+  try {
+    res.send(user);
+  } catch (e) {
+    res.status(500).send("Failed to update user");
+  }
+});
+
+//update using email
+
+app.patch("/user1", async (req, res) => {
+  try {
+    const { email, updates } = req.body;
+    if (!email || !updates) {
+      return res.status(400).send("Email and updates are required");
+    }
+    const userDoc = await User.findOne({ email });
+    if (!userDoc) {
+      return res.status(404).send("User not found");
+    }
+    const updatedUser = await User.findByIdAndUpdate(userDoc._id, updates, {
+      new: true,
+    },{runValidators: true},{ReturnDocument: "after"});
+    if (!updatedUser) {
+      return res.status(500).send("Failed to update user");
+    }
+    res.send(updatedUser);
+  } catch (e) {
+    res.status(500).send("Failed to update user");
+  }
+});
+
 const connectDatabase = require("./config/database");
+const { ReturnDocument } = require("mongodb");
+
 connectDatabase()
   .then(() => {
     // Start server
