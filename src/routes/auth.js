@@ -34,7 +34,7 @@ authRouter.post("/signup", async (req, res) => {
   }
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", async (req, res) => { 
   try {
     validateLoginData(req);
     const { username, email, password } = req.body;
@@ -51,7 +51,7 @@ authRouter.post("/login", async (req, res) => {
 
     if (isPasswordValid) {
       // JWT token created at user model
-      const token = user.getJWT();
+      const token = user.getJWT();//getJWT gives me the JWT token
 
       // add the token to cookie and send back to user
       res.cookie("token", token);
@@ -65,7 +65,7 @@ authRouter.post("/login", async (req, res) => {
 });
 
 authRouter.post("/logout", async (req, res) => {
-  res.cookie("token", null, {
+  res.cookie("token", null, {  
     expires: new Date(Date.now()),
   });
   res.status(200).send("Logout successfully");
@@ -99,6 +99,7 @@ authRouter.patch("/forgetPassword", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 authRouter.patch("/changePassword", userAuth, async (req, res) => {
   try {
     const user = req.user;

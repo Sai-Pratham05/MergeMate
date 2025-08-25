@@ -1,14 +1,13 @@
 const validator = require("validator");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-
 const validateSignUpData = (res) => {
-  const { firstName, lastName, email, password } = res.body;
+  const { username, firstName, email, password } = res.body;
 
-  if (!firstName) {
-    throw new Error("Enter a firstName");
-  } else if (firstName.length > 30 || firstName.length < 3) {
+  if (!username) {
+    throw new Error("Enter a username");
+  } else if (username.length > 30 || username.length < 3) {
     throw new Error("Username must be 3-30 characters");
   } else if (!firstName) {
     throw new Error("Enter a name");
@@ -21,17 +20,17 @@ const validateSignUpData = (res) => {
   }
 };
 const validateLoginData = (res) => {
-  const { firstName, email, password } = res.body;
+  const { username, email, password } = res.body;
 
-  if (!firstName) {
+  if (!username) {
     if (!email) {
       throw new Error("Enter a UserId");
     }
-  } else if (firstName && !email) {
-    if (firstName.length > 30 || firstName < 3) {
-      throw new Error("firstName must be 3-30 characters");
+  } else if (username && !email) {
+    if (username.length > 30 || username < 3) {
+      throw new Error("username must be 3-30 characters");
     }
-  } else if (!firstName && email) {
+  } else if (!username && email) {
     if (!validator.isEmail(email)) {
       throw new Error("Enter a valid email");
     }
@@ -40,9 +39,68 @@ const validateLoginData = (res) => {
   }
 };
 
-const isTokenValid = async (token)=>{
-  const decodedMessage = jwt.verify(token,process.env.secretJWT)
+const isTokenValid = async (token) => {
+  const decodedMessage = jwt.verify(token, process.env.secretJWT);
   return decodedMessage;
-}
+};
 
-module.exports = { validateSignUpData, validateLoginData, isTokenValid };
+const validateProfileData = (req) => {
+  const allowEditFields = [
+    "username",
+    "firstName",
+    "lastName",
+    "avatar",
+    "about",
+    "skills",
+    "dateOfBirth",
+    "gender",
+    "role",
+    "status",
+  ];
+
+  const isEditAllowed = Object.keys(req.body).every((field) =>
+    allowEditFields.includes(field)
+  );
+
+  const {
+    username,
+    firstName,
+    lastName,
+    avatar,
+    about,
+    skills,
+    dateOfBirth,
+    gender,
+    status,
+  } = req.body;
+  //* add validation for each field
+  if (username && (username.length > 30 || username < 3)) {
+    throw new Error("username must be 3-30 characters");
+  }
+  if (firstName && (firstName.length > 25 || firstName.length < 3)) {
+    throw new Error("First name must be 3-25 characters");
+  }
+  if (lastName && (lastName.length > 25 || lastName.length < 3)) {
+    throw new Error("Last name must be 3-25 characters");
+  }
+  if (avatar && !validator.isURL(avatar)) {
+    throw new Error("Invalid Profile URL");
+  }
+  if (about && about.length > 500) {
+    throw new Error("About contain too many words");
+  }
+  if (skills && skills.length > 15) {
+    throw new Error(
+      "Too many skills, make number of skills less than or equal to 15"
+    );
+  }
+
+  return isEditAllowed;
+};
+
+module.exports = {
+  validateSignUpData,
+  validateLoginData,
+  isTokenValid,
+  validateProfileData,
+};
