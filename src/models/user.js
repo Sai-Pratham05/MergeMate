@@ -10,25 +10,32 @@ require("dotenv").config;
 
 const userSchema = new Schema(
   {
-    firstName: {
+    username: {
       type: String,
       required: true,
       unique: true,
       trim: true,
-      minLength: [3, "firstName too small"],
-      maxLength: [30, "firstName too large"],
+      minLength: [3, "Username too small"],
+      maxLength: [30, "Username too large"],
       validate: {
         validator: function (value) {
           return /^[a-zA-Z0-9_]+$/.test(value);
         },
         message:
-          "firstName can only contain alphabets, numbers, and underscores.",
+          "Username can only contain alphabets, numbers, and underscores.",
       },
+    },
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxLength: [25, "First name too large"],
+      match: /^[a-zA-Z]+$/,
     },
     lastName: {
       type: String,
       trim: true,
-      maxLength: [25, "lastName too large"],
+      maxLength: [25, "Last name too large"],
       match: /^[a-zA-Z]+$/,
     },
     email: {
@@ -77,7 +84,8 @@ const userSchema = new Schema(
         validator: function () {
           return this.skills.length < 16;
         },
-        message: "Too many Skills, make total skills less that or equal to 15",
+        message:
+          "Too many skills, make number of skills less than or equal to 15",
       },
     },
     dateOfBirth: {
@@ -103,26 +111,31 @@ const userSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive", "banned"],
+      enum: ["active", "deactivated", "banned"],
       default: "active",
     },
   },
   { timestamps: true }
 );
 
+// Pre-save middleware to set `updatedAt`
+userSchema.pre("save", function (next) {
+  this.updatedAt = Date.now();
+  next();
+});
 
 userSchema.methods.getJWT = function () {
   // create a jwt
   const token = jwt.sign({ _id: this._id }, process.env.secretJWT, {
-    expiresIn: "1d",
+    expiresIn: "3d",
   });
 
   return token;
 };
 
 userSchema.methods.validatePassword = async function (password) {
-    const isPasswordValid = await bcrypt.compare(password, this.password);
-  return isPasswordValid
+  const isPasswordValid = await bcrypt.compare(password, this.password);
+  return isPasswordValid;
 };
 
 // Export the model
