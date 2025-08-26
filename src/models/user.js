@@ -15,6 +15,7 @@ const userSchema = new Schema(
       required: true,
       unique: true,
       trim: true,
+      lowercase: true,
       minLength: [3, "Username too small"],
       maxLength: [30, "Username too large"],
       validate: {
@@ -29,12 +30,14 @@ const userSchema = new Schema(
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
       maxLength: [25, "First name too large"],
       match: /^[a-zA-Z]+$/,
     },
     lastName: {
       type: String,
       trim: true,
+      lowercase: true,
       maxLength: [25, "Last name too large"],
       match: /^[a-zA-Z]+$/,
     },
@@ -118,27 +121,31 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-// Pre-save middleware to set `updatedAt`
-userSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
+//* Creating composite index and index
+userSchema.index({ firstName: 1, lastName: 1 });
+userSchema.index({ skills: 1 });
 
+//* creating custom method to create JWT Token
 userSchema.methods.getJWT = function () {
   // create a jwt
-  const token = jwt.sign({ _id: this._id }, process.env.secretJWT, {
-    expiresIn: "3d",
-  });
+  const token = jwt.sign(
+    { _id: this._id, role: this.role },
+    process.env.secretJWT,
+    {
+      expiresIn: "3d",
+    }
+  );
 
   return token;
 };
 
+//* creating custom method to validate password
 userSchema.methods.validatePassword = async function (password) {
   const isPasswordValid = await bcrypt.compare(password, this.password);
   return isPasswordValid;
 };
 
-// Export the model
+//* Exporting the model
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
